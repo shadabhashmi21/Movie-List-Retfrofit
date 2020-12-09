@@ -19,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var apiService : APIService
     var movieList : MutableList<MovieModel> = mutableListOf()
     var movieAdapter = MovieAdapter(movieList)
+    var apiPageNo = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +45,7 @@ class MainActivity : AppCompatActivity() {
                 val totalItemCount = gridLayoutManager.itemCount
                 val pastVisibleItems = gridLayoutManager.findFirstVisibleItemPosition()
                 if (visibleItemCount + pastVisibleItems >= totalItemCount) {
+                    apiPageNo++
                     callApi()
                 }
             }
@@ -54,7 +56,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun callApi() {
-        apiService.getMovieDetails().enqueue(object : Callback<ApiModel> {
+        apiService.getMovieDetails(apiPageNo).enqueue(object : Callback<ApiModel> {
             override fun onResponse(call: Call<ApiModel>, response: Response<ApiModel>) {
                 populateData(response.body()!!.results)
                 loadMore = true;
