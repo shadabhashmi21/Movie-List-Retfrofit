@@ -10,35 +10,65 @@ import com.e.models.MovieModel
 import retrofit2.*
 import retrofit2.converter.gson.GsonConverterFactory
 
+
 class MainActivity : AppCompatActivity() {
+
+    lateinit var recyclerView: RecyclerView
+    var loadMore : Boolean = true
+    lateinit var gridLayoutManager: GridLayoutManager
+    lateinit var apiService : APIService
+    var movieList : MutableList<MovieModel> = mutableListOf()
+    var movieAdapter = MovieAdapter(movieList)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        gridLayoutManager = GridLayoutManager(this@MainActivity, 2)
+        recyclerView = findViewById<RecyclerView>(R.id.recyclerView).apply {
+            layoutManager = gridLayoutManager
+            adapter = movieAdapter
+        }
 
         val retrofit = Retrofit.Builder()
                 .baseUrl("https://api.themoviedb.org")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
 
-        val api = retrofit.create(APIService::class.java)
+        apiService = retrofit.create(APIService::class.java)
 
-        api.getMovieDetails().enqueue(object : Callback<ApiModel> {
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView,
+                                    dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                val visibleItemCount = gridLayoutManager.childCount
+                val totalItemCount = gridLayoutManager.itemCount
+                val pastVisibleItems = gridLayoutManager.findFirstVisibleItemPosition()
+                if (visibleItemCount + pastVisibleItems >= totalItemCount) {
+                    callApi()
+                }
+            }
+        })
+
+        callApi()
+
+    }
+
+    private fun callApi() {
+        apiService.getMovieDetails().enqueue(object : Callback<ApiModel> {
             override fun onResponse(call: Call<ApiModel>, response: Response<ApiModel>) {
-                showData(response.body()!!.results)
+                populateData(response.body()!!.results)
+                loadMore = true;
             }
 
             override fun onFailure(call: Call<ApiModel>, t: Throwable) {
                 d("Example", "onFailure -> ${t.localizedMessage}")
+                loadMore = true;
             }
         })
     }
 
-    private fun showData(results: List<MovieModel>) {
-        val recyclerView: RecyclerView = findViewById<RecyclerView>(R.id.recyclerView)
-
-        recyclerView.apply {
-            layoutManager = GridLayoutManager(this@MainActivity, 2)
-            adapter = MovieAdapter(results)
-        }
+    private fun populateData(results: List<MovieModel>) {
+        movieList.addAll(results)
+        movieAdapter.notifyDataSetChanged()
     }
 }
